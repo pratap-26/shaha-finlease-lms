@@ -10,3 +10,6 @@ __pycache__/
 .pytest_cache/
 .coverage
 .vscode/
+data/accounts.csv
+data/users.csv
+accounts_100k_test.csv
