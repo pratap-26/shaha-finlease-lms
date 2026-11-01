@@ -1,10 +1,12 @@
 
+from datetime import date
+
 from fastapi import APIRouter, Depends, Query, Request, HTTPException
-from sqlalchemy import or_, select, func
+from sqlalchemy import or_, select, func, case
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Account, User
+from app.models import Account, User, CallLog, PTP
 from app.permissions import get_current_user, require_roles
 
 router = APIRouter(prefix="/accounts", tags=["Accounts"])
@@ -70,10 +72,23 @@ def list_accounts(
 
     offset = (page - 1) * page_size
 
+    # Put due/overdue follow-ups and promises ahead of untouched accounts.
+    today = date.today()
+    due_followup = select(func.min(CallLog.next_follow_up)).where(
+        CallLog.account_id == Account.id,
+        CallLog.next_follow_up.is_not(None),
+        CallLog.next_follow_up <= today,
+    ).correlate(Account).scalar_subquery()
+    due_ptp = select(func.min(PTP.promised_date)).where(
+        PTP.account_id == Account.id,
+        PTP.status == "Pending",
+        PTP.promised_date <= today,
+    ).correlate(Account).scalar_subquery()
     accounts = db.scalars(
-        query.order_by(Account.id)
-        .offset(offset)
-        .limit(page_size)
+        query.order_by(
+            case((due_followup.is_not(None), 0), (due_ptp.is_not(None), 0), else_=1),
+            due_followup.asc(), due_ptp.asc(), Account.id.asc()
+        ).offset(offset).limit(page_size)
     ).all()
 
     return {

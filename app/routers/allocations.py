@@ -16,6 +16,11 @@ class AllocationCreate(BaseModel):
     new_owner_id: int = Field(gt=0)
     reason: str | None = Field(default=None, max_length=255)
 
+class BulkAllocationCreate(BaseModel):
+    account_ids: list[int] = Field(min_length=1, max_length=1000)
+    new_owner_id: int = Field(gt=0)
+    reason: str | None = Field(default=None, max_length=255)
+
 
 @router.post("")
 def allocate_account(
@@ -104,6 +109,43 @@ def allocate_account(
             "allocated_at": history.allocated_at,
         },
     }
+
+
+@router.post("/bulk")
+def bulk_allocate_accounts(payload: BulkAllocationCreate, request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+    if user.role not in {"manager", "head"}:
+        raise HTTPException(status_code=403, detail="Only managers and Head of Collections can allocate accounts.")
+    if len(set(payload.account_ids)) != len(payload.account_ids):
+        raise HTTPException(status_code=400, detail="Duplicate account IDs were selected.")
+    caller = db.get(User, payload.new_owner_id)
+    if caller is None or caller.role != "caller":
+        raise HTTPException(status_code=400, detail="Select a valid caller.")
+    if user.role == "manager" and (caller.office_id != user.office_id or caller.manager_id != user.id):
+        raise HTTPException(status_code=403, detail="Managers may allocate only to their direct-report callers.")
+    accounts = db.scalars(select(Account).where(Account.id.in_(payload.account_ids))).all()
+    if len(accounts) != len(payload.account_ids):
+        raise HTTPException(status_code=404, detail="One or more accounts were not found.")
+    if any(a.office_id != caller.office_id for a in accounts):
+        raise HTTPException(status_code=400, detail="All selected accounts must belong to the caller's office.")
+    if user.role == "manager" and any(a.office_id != user.office_id for a in accounts):
+        raise HTTPException(status_code=403, detail="Managers cannot allocate outside their office.")
+    changed = 0
+    try:
+        for account in accounts:
+            if account.owner_id == caller.id:
+                continue
+            db.add(AllocationHistory(account_id=account.id, previous_owner_id=account.owner_id,
+                                     new_owner_id=caller.id, allocated_by_id=user.id, reason=payload.reason))
+            account.owner_id = caller.id
+            changed += 1
+        db.commit()
+        return {"message": "Bulk allocation completed.", "updated": changed,
+                "unchanged": len(accounts)-changed, "caller_id": caller.id}
+    except Exception:
+        db.rollback()
+        raise
+
 @router.get("/callers")
 def get_eligible_callers(
     request: Request,

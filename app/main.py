@@ -10,6 +10,7 @@ from app.routers.ptp import router as ptp_router
 from app.routers.payments import router as payments_router
 from app.routers.allocations import router as allocations_router
 from app.routers.dashboard import router as dashboard_router
+from app.routers.imports import router as imports_router
 from fastapi import Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -43,6 +44,7 @@ app.include_router(ptp_router)
 app.include_router(payments_router)
 app.include_router(allocations_router)
 app.include_router(dashboard_router)
+app.include_router(imports_router)
 
 @app.get("/login")
 def login_page(request: Request):

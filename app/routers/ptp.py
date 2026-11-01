@@ -9,12 +9,29 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import PTP, Account
+from app.models import PTP, Account, Payment
 from app.permissions import get_current_user
 from app.routers.accounts import visible_accounts_query
 
 
 router = APIRouter(prefix="/ptp", tags=["Promise to Pay"])
+
+def refresh_overdue_ptps(db: Session, account_id: int | None = None):
+    query = select(PTP).where(PTP.status == "Pending", PTP.promised_date < date.today())
+    if account_id is not None:
+        query = query.where(PTP.account_id == account_id)
+    records = db.scalars(query).all()
+    for ptp in records:
+        paid = db.scalar(
+            select(func.coalesce(func.sum(Payment.amount), 0)).where(
+                Payment.account_id == ptp.account_id,
+                Payment.paid_at >= ptp.created_at
+            )
+        ) or Decimal("0")
+        ptp.status = "Kept" if Decimal(str(paid)) >= Decimal(str(ptp.promised_amount)) else "Broken"
+    if records:
+        db.commit()
+
 
 PTPStatus = Literal["Pending", "Kept", "Broken", "Cancelled"]
 
@@ -117,6 +134,7 @@ def get_account_ptps(
     user = get_current_user(request, db)
 
     check_account_access(account_id, user, db)
+    refresh_overdue_ptps(db, account_id)
 
     query = select(PTP).where(PTP.account_id == account_id)
 
@@ -162,6 +180,7 @@ def list_ptps(
     db: Session = Depends(get_db),
 ):
     user = get_current_user(request, db)
+    refresh_overdue_ptps(db)
 
     visible_ids = visible_accounts_query(user).with_only_columns(
         Account.id

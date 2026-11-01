@@ -45,6 +45,21 @@
             <button class="refresh-button" id="refresh-button">↻ &nbsp; Refresh</button>
         </section>
 
+        <section class="panel" id="manager-tools" style="padding:16px;margin-bottom:16px;">
+            <h3>Portfolio tools</h3>
+            <div class="portfolio-toolbar">
+                <label>Import accounts CSV <input type="file" id="accounts-csv" accept=".csv"></label>
+                <button class="primary-button compact" id="upload-csv-button" type="button">Upload CSV</button>
+            </div>
+            <p id="upload-result" class="muted"></p>
+            <div class="portfolio-toolbar">
+                <select id="bulk-caller"><option value="">Select caller for selected accounts</option></select>
+                <input id="bulk-reason" maxlength="255" placeholder="Allocation reason">
+                <button class="primary-button compact" id="bulk-allocate-button" type="button">Allocate selected</button>
+                <span id="selected-count">0 selected</span>
+            </div>
+        </section>
+
         <section class="portfolio-toolbar">
             <input
                 type="search"
@@ -57,8 +72,9 @@
                 <option value="New">New</option>
                 <option value="Contacted">Contacted</option>
                 <option value="PTP">PTP</option>
-                <option value="Paid">Paid</option>
+                <option value="Part-paid">Part-paid</option>
                 <option value="Closed">Closed</option>
+                <option value="Settled">Settled</option>
             </select>
 
             <button class="primary-button compact" id="search-button">Search</button>
@@ -78,6 +94,7 @@
                 <table class="accounts-table">
                     <thead>
                         <tr>
+                            <th><input type="checkbox" id="select-page" title="Select page"></th>
                             <th>Loan Number</th>
                             <th>Customer</th>
                             <th>Mobile</th>
@@ -88,7 +105,7 @@
                         </tr>
                     </thead>
                     <tbody id="accounts-table-body">
-                        <tr><td colspan="7">Loading accounts...</td></tr>
+                        <tr><td colspan="8">Loading accounts...</td></tr>
                     </tbody>
                 </table>
             </div>

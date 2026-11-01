@@ -4,6 +4,7 @@ const pageSize = 25;
 let totalPages = 1;
 let activeAccountId = null;
 let currentUserRole = "";
+const selectedAccountIds = new Set();
 
 const tableBody = document.getElementById("accounts-table-body");
 const errorBox = document.getElementById("accounts-error");
@@ -55,7 +56,7 @@ async function api(url, options = {}) {
 
 async function loadAccounts() {
     errorBox.textContent = "";
-    tableBody.innerHTML = `<tr><td colspan="7">Loading accounts...</td></tr>`;
+    tableBody.innerHTML = `<tr><td colspan="8">Loading accounts...</td></tr>`;
 
     const params = new URLSearchParams({
         page: currentPage,
@@ -85,12 +86,13 @@ async function loadAccounts() {
 
         if (!data.items.length) {
             tableBody.innerHTML =
-                `<tr><td colspan="7">No accounts found.</td></tr>`;
+                `<tr><td colspan="8">No accounts found.</td></tr>`;
             return;
         }
 
         tableBody.innerHTML = data.items.map(a => `
             <tr>
+                <td><input type="checkbox" class="account-select" data-account-id="${a.id}" ${selectedAccountIds.has(a.id) ? "checked" : ""}></td>
                 <td><strong>${escapeHTML(a.loan_no)}</strong></td>
                 <td>${escapeHTML(a.customer_name)}</td>
                 <td>${escapeHTML(a.mobile)}</td>
@@ -108,7 +110,7 @@ async function loadAccounts() {
 
     } catch (error) {
         tableBody.innerHTML =
-            `<tr><td colspan="7">Could not load accounts.</td></tr>`;
+            `<tr><td colspan="8">Could not load accounts.</td></tr>`;
         errorBox.textContent = error.message;
     }
 }
@@ -243,14 +245,15 @@ async function loadPaymentHistory() {
     try {
         const data = await api(`/payments/${activeAccountId}`);
 
-        box.innerHTML = data.items.length ? data.items.map(item => `
+        box.innerHTML = `<div class="history-item"><strong>Total paid: ${money(data.total_paid || 0)}</strong><p>Loaded outstanding: ${money(data.loaded_outstanding || 0)}</p></div>` +
+            (data.items.length ? data.items.map(item => `
             <div class="history-item">
                 <strong>${money(item.amount)}</strong>
                 <p>Reference: ${escapeHTML(item.reference || "—")}</p>
                 <p>${escapeHTML(item.remarks || "No remarks")}</p>
                 <p>${escapeHTML(item.paid_at)}</p>
             </div>
-        `).join("") : "<p>No payments recorded.</p>";
+        `).join("") : "<p>No payments recorded.</p>");
 
     } catch (error) {
         box.textContent = error.message;
@@ -402,16 +405,88 @@ async function loadUser() {
         const name = user.name || user.user?.name || "User";
         const role = user.role || user.user?.role || "User";
         currentUserRole = role.toLowerCase();
+        if (!["manager", "head"].includes(currentUserRole)) {
+            document.getElementById("manager-tools").style.display = "none";
+        }
 
         document.getElementById("user-name").textContent = name;
         document.getElementById("user-role").textContent = role;
         document.getElementById("user-avatar").textContent =
             name.charAt(0).toUpperCase();
+        if (["manager", "head"].includes(currentUserRole)) {
+            const callers = await api(`/allocations/callers?office_id=${user.office_id}`);
+            document.getElementById("bulk-caller").innerHTML =
+                '<option value="">Select caller</option>' + callers.items.map(c =>
+                    `<option value="${c.id}">${escapeHTML(c.name)}</option>`).join("");
+        }
 
     } catch {
         window.location.href = "/login";
     }
 }
+
+async function refreshBulkCallerOptions() {
+    if (!selectedAccountIds.size) return;
+    try {
+        const firstId = [...selectedAccountIds][0];
+        const account = await api(`/accounts/${firstId}`);
+        const callers = await api(`/allocations/callers?office_id=${account.office_id}`);
+        document.getElementById("bulk-caller").innerHTML =
+            '<option value="">Select caller</option>' + callers.items.map(c =>
+                `<option value="${c.id}">${escapeHTML(c.name)}</option>`).join("");
+    } catch (error) { showMessage(error.message, true); }
+}
+
+document.getElementById("accounts-table-body").addEventListener("change", async event => {
+    if (!event.target.classList.contains("account-select")) return;
+    const id = Number(event.target.dataset.accountId);
+    if (event.target.checked) selectedAccountIds.add(id);
+    else selectedAccountIds.delete(id);
+    document.getElementById("selected-count").textContent = `${selectedAccountIds.size} selected`;
+    await refreshBulkCallerOptions();
+});
+
+document.getElementById("select-page").addEventListener("change", async event => {
+    document.querySelectorAll(".account-select").forEach(box => {
+        box.checked = event.target.checked;
+        const id = Number(box.dataset.accountId);
+        if (box.checked) selectedAccountIds.add(id);
+        else selectedAccountIds.delete(id);
+    });
+    document.getElementById("selected-count").textContent = `${selectedAccountIds.size} selected`;
+    await refreshBulkCallerOptions();
+});
+
+document.getElementById("upload-csv-button").addEventListener("click", async () => {
+    const file = document.getElementById("accounts-csv").files[0];
+    const result = document.getElementById("upload-result");
+    if (!file) { result.textContent = "Choose a CSV file first."; return; }
+    const form = new FormData();
+    form.append("file", file);
+    result.textContent = "Uploading and validating CSV...";
+    try {
+        const response = await fetch("/imports/accounts", {method:"POST", body:form, credentials:"same-origin"});
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Upload failed");
+        result.textContent = `Imported ${data.imported}; skipped duplicates ${data.skipped_duplicates}; row errors ${data.error_count}.`;
+        currentPage = 1;
+        await loadAccounts();
+    } catch (error) { result.textContent = error.message; }
+});
+
+document.getElementById("bulk-allocate-button").addEventListener("click", async () => {
+    const ids = [...selectedAccountIds];
+    const callerId = Number(document.getElementById("bulk-caller").value);
+    const reason = document.getElementById("bulk-reason").value.trim();
+    if (!ids.length || !callerId) { showMessage("Select accounts and a caller.", true); return; }
+    try {
+        const result = await api("/allocations/bulk", {method:"POST", body:JSON.stringify({account_ids:ids,new_owner_id:callerId,reason})});
+        showMessage(`Bulk allocation complete: ${result.updated} updated, ${result.unchanged} unchanged.`);
+        selectedAccountIds.clear();
+        document.getElementById("selected-count").textContent = "0 selected";
+        await loadAccounts();
+    } catch (error) { showMessage(error.message, true); }
+});
 
 loadUser();
 loadAccounts();
