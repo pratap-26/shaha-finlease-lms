@@ -1,4 +1,3 @@
-@'
 # Shaha Finlease - Loan Management System
 
 A role-based Loan Management System built using FastAPI, SQLAlchemy, SQLite, HTML, CSS and JavaScript.
