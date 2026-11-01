@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Shaha Finlease</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-mark small">S</div>
+                <div>
+                    <strong>SHAHA</strong>
+                    <span>FINLEASE</span>
+                </div>
+            </div>
+
+            <p class="nav-heading">WORKSPACE</p>
+            <a class="nav-link active" href="/dashboard">▦ &nbsp; Dashboard</a>
+            <a class="nav-link" href="/portfolio">▤ &nbsp; Accounts</a>
+            <a class="nav-link" href="/docs">▤ &nbsp; API Documentation</a>
+
+            <div class="sidebar-bottom">
+                <div class="user-avatar" id="user-avatar">U</div>
+                <div class="user-details">
+                    <strong id="user-name">Loading...</strong>
+                    <span id="user-role">User</span>
+                </div>
+                <button id="logout-button" class="logout-button" title="Logout">↗</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">COLLECTIONS MANAGEMENT</p>
+                    <h1>Dashboard</h1>
+                </div>
+                <div class="topbar-date" id="current-date"></div>
+            </header>
+
+            <section class="welcome-row">
+                <div>
+                    <h2>Good to have you back, <span id="welcome-name">there</span>.</h2>
+                    <p class="muted">Here's what's happening across your portfolio.</p>
+                </div>
+                <button class="refresh-button" onclick="loadDashboard()">↻ &nbsp; Refresh</button>
+            </section>
+
+            <p id="dashboard-error" class="error-message"></p>
+
+            <section class="kpi-grid">
+                <article class="kpi-card">
+                    <p>Total Accounts</p>
+                    <h2 id="total-accounts">—</h2>
+                    <span>Accounts in your portfolio</span>
+                </article>
+                <article class="kpi-card">
+                    <p>Total Outstanding</p>
+                    <h2 id="total-outstanding">—</h2>
+                    <span>Current outstanding balance</span>
+                </article>
+                <article class="kpi-card">
+                    <p>Total Recovered</p>
+                    <h2 id="total-recovered">—</h2>
+                    <span>Payments recorded</span>
+                </article>
+                <article class="kpi-card">
+                    <p>Calls Recorded</p>
+                    <h2 id="total-calls">—</h2>
+                    <span>Customer interactions</span>
+                </article>
+                <article class="kpi-card">
+                    <p>Active PTPs</p>
+                    <h2 id="pending-ptps">—</h2>
+                    <span>Pending payment promises</span>
+                </article>
+                <article class="kpi-card">
+                    <p>PTP Amount</p>
+                    <h2 id="pending-amount">—</h2>
+                    <span>Value of pending promises</span>
+                </article>
+            </section>
+
+            <section class="content-grid">
+                <article class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Account Status</h3>
+                            <p class="muted">Portfolio distribution</p>
+                        </div>
+                    </div>
+                    <div id="status-list" class="data-list">Loading...</div>
+                </article>
+
+                <article class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h3>Office Distribution</h3>
+                            <p class="muted">Accounts by office</p>
+                        </div>
+                    </div>
+                    <div id="office-list" class="data-list">Loading...</div>
+                </article>
+            </section>
+
+            <footer class="page-footer">Shaha Finlease LMS · Collections workspace</footer>
+        </main>
+    </div>
+
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

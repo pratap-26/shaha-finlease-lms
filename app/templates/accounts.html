@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accounts | Shaha Finlease</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app-shell">
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-mark small">S</div>
+            <div><strong>SHAHA</strong><span>FINLEASE</span></div>
+        </div>
+
+        <p class="nav-heading">WORKSPACE</p>
+        <a class="nav-link" href="/dashboard">▦ &nbsp; Dashboard</a>
+        <a class="nav-link active" href="/portfolio">▤ &nbsp; Accounts</a>
+
+        <div class="sidebar-bottom">
+            <div class="user-avatar" id="user-avatar">U</div>
+            <div class="user-details">
+                <strong id="user-name">User</strong>
+                <span id="user-role">Role</span>
+            </div>
+            <button id="logout-button" class="logout-button" title="Logout">↗</button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">COLLECTIONS MANAGEMENT</p>
+                <h1>Accounts Portfolio</h1>
+            </div>
+            <div class="topbar-date" id="current-date"></div>
+        </header>
+
+        <section class="welcome-row">
+            <div>
+                <h2>Manage your accounts</h2>
+                <p class="muted">Search, review and track your allocated loan portfolio.</p>
+            </div>
+            <button class="refresh-button" id="refresh-button">↻ &nbsp; Refresh</button>
+        </section>
+
+        <section class="portfolio-toolbar">
+            <input
+                type="search"
+                id="search-input"
+                placeholder="Search loan number, customer or mobile..."
+            >
+
+            <select id="status-filter">
+                <option value="">All statuses</option>
+                <option value="New">New</option>
+                <option value="Contacted">Contacted</option>
+                <option value="PTP">PTP</option>
+                <option value="Paid">Paid</option>
+                <option value="Closed">Closed</option>
+            </select>
+
+            <button class="primary-button compact" id="search-button">Search</button>
+        </section>
+
+        <p id="accounts-error" class="error-message"></p>
+
+        <section class="panel accounts-panel">
+            <div class="panel-heading">
+                <div>
+                    <h3>Account Records</h3>
+                    <p class="muted" id="result-count">Loading accounts...</p>
+                </div>
+            </div>
+
+            <div class="table-scroll">
+                <table class="accounts-table">
+                    <thead>
+                        <tr>
+                            <th>Loan Number</th>
+                            <th>Customer</th>
+                            <th>Mobile</th>
+                            <th>Product</th>
+                            <th>Outstanding</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="accounts-table-body">
+                        <tr><td colspan="7">Loading accounts...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination">
+                <button id="previous-button" class="refresh-button">← Previous</button>
+                <span id="page-label">Page 1</span>
+                <button id="next-button" class="refresh-button">Next →</button>
+            </div>
+        </section>
+    </main>
+</div>
+
+
+<div id="account-modal" class="modal hidden">
+    <div class="modal-card account-workspace">
+        <div class="modal-heading">
+            <div>
+                <p class="eyebrow">COLLECTIONS WORKSPACE</p>
+                <h2 id="modal-customer">Customer</h2>
+                <p class="muted" id="modal-loan-number"></p>
+            </div>
+            <button id="close-modal" class="modal-close">&times;</button>
+        </div>
+
+        <div class="workspace-tabs">
+            <button class="workspace-tab active" data-tab="overview">Overview</button>
+            <button class="workspace-tab" data-tab="calls">Call History</button>
+            <button class="workspace-tab" data-tab="ptps">Promises to Pay</button>
+            <button class="workspace-tab" data-tab="payments">Payments</button>
+            <button class="workspace-tab" data-tab="allocations">Allocations</button>
+        </div>
+
+        <section id="tab-overview" class="workspace-section">
+            <h3>Account Information</h3>
+            <div id="account-details" class="detail-grid"></div>
+        </section>
+
+        <section id="tab-calls" class="workspace-section hidden">
+            <h3>Record Customer Interaction</h3>
+
+            <form id="call-form" class="workspace-form">
+                <label>Call disposition</label>
+                <select id="call-disposition" required>
+                    <option value="">Select outcome</option>
+                    <option>Connected</option>
+                    <option>Not Connected</option>
+                    <option>Busy</option>
+                    <option>Wrong Number</option>
+                    <option>Callback Requested</option>
+                    <option>Customer Refused</option>
+                </select>
+
+                <label>Remarks</label>
+                <textarea id="call-remarks" rows="3"
+                    placeholder="Enter call notes..."></textarea>
+
+                <label>Next follow-up date</label>
+                <input id="call-followup" type="date">
+
+                <button class="primary-button" type="submit">
+                    Save Call Log
+                </button>
+            </form>
+
+            <h3>Previous Interactions</h3>
+            <div id="call-history" class="history-list">Loading...</div>
+        </section>
+
+        <section id="tab-ptps" class="workspace-section hidden">
+            <h3>Record Promise to Pay</h3>
+
+            <form id="ptp-form" class="workspace-form">
+                <label>Promised amount (₹)</label>
+                <input id="ptp-amount" type="number"
+                    min="0.01" step="0.01" required>
+
+                <label>Promised date</label>
+                <input id="ptp-date" type="date" required>
+
+                <label>Remarks</label>
+                <textarea id="ptp-remarks" rows="2"></textarea>
+
+                <button class="primary-button" type="submit">
+                    Record Promise
+                </button>
+            </form>
+
+            <h3>Promise History</h3>
+            <div id="ptp-history" class="history-list">Loading...</div>
+        </section>
+
+        <section id="tab-payments" class="workspace-section hidden">
+            <h3>Record Payment</h3>
+
+            <form id="payment-form" class="workspace-form">
+                <label>Payment amount (₹)</label>
+                <input id="payment-amount" type="number"
+                    min="0.01" step="0.01" required>
+
+                <label>Transaction reference</label>
+                <input id="payment-reference" maxlength="100">
+
+                <label>Remarks</label>
+                <textarea id="payment-remarks" rows="2"></textarea>
+
+                <button class="primary-button" type="submit">
+                    Record Payment
+                </button>
+            </form>
+
+            <h3>Payment History</h3>
+            <div id="payment-history" class="history-list">Loading...</div>
+        </section>
+        <section id="tab-allocations" class="workspace-section hidden">
+            <h3>Reassign Account</h3>
+
+            <div id="allocation-controls">
+                <form id="allocation-form" class="workspace-form">
+                    <label>New account owner</label>
+                    <select id="allocation-owner" required>
+                        <option value="">Select a caller</option>
+                    </select>
+
+                    <label>Reason for reassignment</label>
+                    <textarea id="allocation-reason" rows="2"
+                        maxlength="255" required></textarea>
+
+                    <button class="primary-button" type="submit">
+                        Reassign Account
+                    </button>
+                </form>
+            </div>
+
+            <h3>Allocation History</h3>
+            <div id="allocation-history" class="history-list">Loading...</div>
+        </section>
+        <p id="workspace-message" class="workspace-message"></p>
+    </div>
+</div>
+
+
+<script src="/static/js/accounts.js"></script>
+</body>
+</html>

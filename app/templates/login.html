@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shaha Finlease | Login</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="login-body">
+    <main class="login-card">
+        <div class="brand-mark">S</div>
+        <p class="eyebrow">SHAHA FINLEASE</p>
+        <h1>Welcome back.</h1>
+        <p class="muted">Sign in to your Collections Management System.</p>
+
+        <form id="login-form">
+            <label for="username">Username</label>
+            <input id="username" name="username" required placeholder="Enter your username">
+
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" required placeholder="Enter your password">
+
+            <p id="login-error" class="error-message"></p>
+            <button type="submit" class="primary-button" id="login-button">Sign in</button>
+        </form>
+
+        <p class="login-footer">Secure access · Shaha Finlease LMS</p>
+    </main>
+
+    <script>
+        document.getElementById("login-form").addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const button = document.getElementById("login-button");
+            const error = document.getElementById("login-error");
+            button.disabled = true;
+            button.textContent = "Signing in...";
+            error.textContent = "";
+
+            const formData = new URLSearchParams();
+            formData.append("username", document.getElementById("username").value);
+            formData.append("password", document.getElementById("password").value);
+
+            try {
+                const response = await fetch("/auth/login", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                    body: formData,
+                    credentials: "same-origin"
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.detail || "Login failed.");
+                }
+
+                window.location.href = "/dashboard";
+            } catch (err) {
+                error.textContent = err.message;
+                button.disabled = false;
+                button.textContent = "Sign in";
+            }
+        });
+    </script>
+</body>
+</html>
