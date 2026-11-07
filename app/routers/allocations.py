@@ -42,6 +42,12 @@ def allocate_account(
     if account is None:
         raise HTTPException(status_code=404, detail="Account not found.")
 
+    if account.status in {"Closed", "Settled"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Closed or settled accounts cannot be reallocated."
+        )
+
     new_owner = db.get(User, payload.new_owner_id)
 
     if new_owner is None or new_owner.role != "caller":
@@ -123,9 +129,30 @@ def bulk_allocate_accounts(payload: BulkAllocationCreate, request: Request, db: 
         raise HTTPException(status_code=400, detail="Select a valid caller.")
     if user.role == "manager" and (caller.office_id != user.office_id or caller.manager_id != user.id):
         raise HTTPException(status_code=403, detail="Managers may allocate only to their direct-report callers.")
-    accounts = db.scalars(select(Account).where(Account.id.in_(payload.account_ids))).all()
+    accounts = db.scalars(
+        select(Account).where(Account.id.in_(payload.account_ids))
+    ).all()
+
     if len(accounts) != len(payload.account_ids):
-        raise HTTPException(status_code=404, detail="One or more accounts were not found.")
+        raise HTTPException(
+            status_code=404,
+            detail="One or more accounts were not found."
+        )
+
+    closed_accounts = [
+        account.id
+        for account in accounts
+        if account.status in {"Closed", "Settled"}
+    ]
+
+    if closed_accounts:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Closed or settled accounts cannot be reallocated.",
+                "account_ids": closed_accounts
+            }
+        )
     if any(a.office_id != caller.office_id for a in accounts):
         raise HTTPException(status_code=400, detail="All selected accounts must belong to the caller's office.")
     if user.role == "manager" and any(a.office_id != user.office_id for a in accounts):

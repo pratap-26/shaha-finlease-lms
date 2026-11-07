@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import Payment, Account
+from app.models import Payment, Account, AccountClosure, Settlement
 from app.permissions import get_current_user
 from app.routers.accounts import visible_accounts_query
 
@@ -42,6 +42,25 @@ def refresh_recovery_status(db: Session, account: Account):
 def record_payment(payload: PaymentCreate, request: Request, db: Session = Depends(get_db)):
     user = get_current_user(request, db)
     account = check_account_access(payload.account_id, user, db)
+    if account.status in {"Closed", "Settled"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Payments cannot be recorded against a closed or settled account."
+        )
+    active_settlement = db.scalar(
+        select(Settlement).where(
+            Settlement.account_id == account.id,
+            Settlement.status.in_(
+                {"Pending", "Approved", "In Progress"}
+            )
+        )
+    )
+
+    if active_settlement:
+        raise HTTPException(
+            status_code=409,
+            detail="A settlement is active for this account. Record payments through the settlement workflow."
+        )
     amount = Decimal(str(payload.amount)).quantize(Decimal("0.01"))
     if amount <= 0:
         raise HTTPException(status_code=400, detail="Payment must be greater than zero.")
@@ -57,6 +76,27 @@ def record_payment(payload: PaymentCreate, request: Request, db: Session = Depen
         db.add(payment)
         db.flush()
         paid_total = refresh_recovery_status(db, account)
+
+        if account.status == "Closed":
+            existing_closure = db.scalar(
+                select(AccountClosure).where(
+                    AccountClosure.account_id == account.id
+                )
+            )
+
+            if existing_closure is None:
+                db.add(
+                    AccountClosure(
+                        account_id=account.id,
+                        closure_type="Full Recovery",
+                        closure_reason="Full loaded recovery target received.",
+                        total_recovered=paid_total,
+                        closed_by_id=user.id,
+                        closed_at=datetime.utcnow(),
+                        remarks="Account automatically closed after full recovery."
+                    )
+                )
+
         db.commit()
         db.refresh(payment)
         return {"message": "Payment recorded successfully.",

@@ -15,6 +15,7 @@ from fastapi import Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from app.routers.settlements import router as settlements_router
 
 app = FastAPI(
     title="Shaha Finlease LMS",
@@ -45,6 +46,7 @@ app.include_router(payments_router)
 app.include_router(allocations_router)
 app.include_router(dashboard_router)
 app.include_router(imports_router)
+app.include_router(settlements_router)
 
 @app.get("/login")
 def login_page(request: Request):

@@ -242,4 +242,113 @@ class Payment(Base):
     reference = Column(String(100), nullable=True)
     remarks = Column(Text, nullable=True)
 
+class Settlement(Base):
+    __tablename__ = "settlements"
 
+    id = Column(Integer, primary_key=True, index=True)
+
+    account_id = Column(
+        Integer,
+        ForeignKey("accounts.id"),
+        nullable=False,
+        index=True,
+    )
+
+    original_outstanding = Column(Numeric(12, 2), nullable=False)
+    proposed_amount = Column(Numeric(12, 2), nullable=False)
+    approved_amount = Column(Numeric(12, 2), nullable=True)
+    waiver_amount = Column(Numeric(12, 2), nullable=True)
+
+    reason = Column(Text, nullable=False)
+    remarks = Column(Text, nullable=True)
+
+    proposed_by_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+    )
+
+    reviewed_by_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=True,
+    )
+
+    status = Column(
+        String(30),
+        nullable=False,
+        default="Pending",
+        index=True,
+    )
+
+    proposed_at = Column(
+        DateTime,
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    reviewed_at = Column(DateTime, nullable=True)
+    payment_due_date = Column(Date, nullable=True)
+
+
+class SettlementPayment(Base):
+    __tablename__ = "settlement_payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    settlement_id = Column(
+        Integer,
+        ForeignKey("settlements.id"),
+        nullable=False,
+        index=True,
+    )
+
+    recorded_by_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+    )
+
+    amount = Column(Numeric(12, 2), nullable=False)
+
+    paid_at = Column(
+        DateTime,
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    reference = Column(String(100), nullable=True)
+    remarks = Column(Text, nullable=True)
+
+
+class AccountClosure(Base):
+    __tablename__ = "account_closures"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    account_id = Column(
+        Integer,
+        ForeignKey("accounts.id"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+
+    closure_type = Column(String(30), nullable=False)
+    closure_reason = Column(Text, nullable=False)
+
+    total_recovered = Column(Numeric(12, 2), nullable=False)
+
+    closed_by_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+    )
+
+    closed_at = Column(
+        DateTime,
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    remarks = Column(Text, nullable=True)

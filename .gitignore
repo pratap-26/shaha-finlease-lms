@@ -13,3 +13,11 @@ __pycache__/
 data/accounts.csv
 data/users.csv
 accounts_100k_test.csv
+shaha_lms_pre_v2_backup.db
+.idea/
+.DS_Store
+Thumbs.db
+htmlcov/
+tests/test_full_closure.py
+tests/test_reconciliation.py
+tests/test_settlement_workflow.py
