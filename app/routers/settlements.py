@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import (
     Account,
+    User,
     Payment,
     Settlement,
     SettlementPayment,
@@ -221,6 +222,8 @@ def list_settlements(
     request: Request,
     status_filter: str | None = Query(default=None, alias="status"),
     account_id: int | None = Query(default=None, gt=0),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=25, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
     user = get_current_user(request, db)
@@ -238,19 +241,98 @@ def list_settlements(
         get_visible_account(account_id, user, db)
         query = query.where(Settlement.account_id == account_id)
 
+    total = db.scalar(
+        select(func.count()).select_from(query.subquery())
+    ) or 0
+
     records = db.scalars(
         query.order_by(Settlement.proposed_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
     ).all()
 
+    account_ids = {item.account_id for item in records}
+
+    accounts_by_id = {}
+
+    if account_ids:
+        accounts = db.scalars(
+            select(Account).where(Account.id.in_(account_ids))
+        ).all()
+
+        accounts_by_id = {
+            account.id: account
+            for account in accounts
+        }
+
+    items = []
+
+    for item in records:
+        account = accounts_by_id.get(item.account_id)
+
+        settlement_data = settlement_response(db, item)
+        settlement_data["customer_name"] = (
+            account.customer_name if account else "Unknown"
+        )
+        settlement_data["loan_no"] = (
+            account.loan_no if account else str(item.account_id)
+        )
+
+        items.append(settlement_data)
+
     return {
-        "items": [
-            settlement_response(db, item)
-            for item in records
-        ],
-        "total": len(records),
+        "items": items,
+        "total": total,
+        "pagination": {
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "pages": (total + page_size - 1) // page_size,
+        },
     }
 
+# -------------------- SETTLEMENT PAYMENT HISTORY --------------------
 
+@router.get("/{settlement_id}/payments")
+def get_settlement_payment_history(
+    settlement_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    user = get_current_user(request, db)
+
+    # Enforce the user's existing account visibility permissions.
+    settlement = get_settlement(settlement_id, user, db)
+
+    records = db.execute(
+        select(SettlementPayment, User.name)
+        .join(User, SettlementPayment.recorded_by_id == User.id)
+        .where(SettlementPayment.settlement_id == settlement.id)
+        .order_by(
+            SettlementPayment.paid_at.asc(),
+            SettlementPayment.id.asc(),
+        )
+    ).all()
+
+    items = [
+        {
+            "id": payment.id,
+            "amount": str(payment.amount),
+            "paid_at": payment.paid_at,
+            "reference": payment.reference,
+            "remarks": payment.remarks,
+            "recorded_by_id": payment.recorded_by_id,
+            "recorded_by_name": recorded_by_name,
+        }
+        for payment, recorded_by_name in records
+    ]
+
+    return {
+        "settlement_id": settlement.id,
+        "items": items,
+        "total": len(items),
+        "total_paid": str(settlement_paid_total(db, settlement.id)),
+    }
 # -------------------- APPROVE SETTLEMENT --------------------
 
 @router.post("/{settlement_id}/approve")
@@ -383,7 +465,49 @@ def reject_settlement(
 
 
 # -------------------- RECORD SETTLEMENT PAYMENT --------------------
+# -------------------- GET SETTLEMENT PAYMENT HISTORY --------------------
 
+@router.get("/{settlement_id}/payments")
+def get_settlement_payments(
+    settlement_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    user = get_current_user(request, db)
+
+    # Enforce the same account visibility rules as other settlement actions.
+    settlement = get_settlement(settlement_id, user, db)
+
+    records = db.execute(
+        select(SettlementPayment, User.name)
+        .join(User, SettlementPayment.recorded_by_id == User.id)
+        .where(SettlementPayment.settlement_id == settlement.id)
+        .order_by(SettlementPayment.paid_at.desc())
+    ).all()
+
+    items = [
+        {
+            "id": payment.id,
+            "amount": str(payment.amount),
+            "paid_at": payment.paid_at,
+            "reference": payment.reference,
+            "remarks": payment.remarks,
+            "recorded_by": recorded_by,
+        }
+        for payment, recorded_by in records
+    ]
+
+    total_paid = sum(
+        (Decimal(item["amount"]) for item in items),
+        Decimal("0.00"),
+    )
+
+    return {
+        "settlement_id": settlement.id,
+        "items": items,
+        "total_payments": len(items),
+        "total_paid": str(total_paid),
+    }
 @router.post("/{settlement_id}/payments")
 def record_settlement_payment(
     settlement_id: int,

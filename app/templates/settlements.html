@@ -1,0 +1,318 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settlement Centre | Shaha Finlease</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-mark small">S</div>
+                <div>
+                    <strong>SHAHA</strong>
+                    <span>FINLEASE</span>
+                </div>
+            </div>
+
+            <p class="nav-heading">WORKSPACE</p>
+            <a class="nav-link" href="/dashboard">▦ &nbsp; Dashboard</a>
+            <a class="nav-link" href="/portfolio">▤ &nbsp; Accounts</a>
+            <a class="nav-link active" href="/settlement-centre">₹ &nbsp; Settlement Centre</a>
+            <a class="nav-link" href="/docs">▤ &nbsp; API Documentation</a>
+
+            <div class="sidebar-bottom">
+                <div class="user-avatar" id="user-avatar">U</div>
+                <div class="user-details">
+                    <strong id="user-name">Loading...</strong>
+                    <span id="user-role">User</span>
+                </div>
+                <button id="logout-button" class="logout-button" title="Logout">↗</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">COLLECTIONS MANAGEMENT</p>
+                    <h1>Settlement Centre</h1>
+                </div>
+                <div class="topbar-date" id="current-date"></div>
+            </header>
+
+            <section class="welcome-row">
+                <div>
+                    <h2>Settlement management</h2>
+                    <p class="muted">
+                        Review proposals, manage approvals and track settlement recovery.
+                    </p>
+                </div>
+                <button class="refresh-button" id="refresh-settlements">
+                    Refresh
+                </button>
+            </section>
+
+            <p id="settlement-error" class="error-message"></p>
+            <p id="settlement-success" class="success-message"></p>
+
+            <section class="kpi-grid settlement-kpi-grid">
+                <article class="kpi-card">
+                    <p>Total Proposals</p>
+                    <h2 id="settlement-total">—</h2>
+                    <span>Visible settlement records</span>
+                </article>
+                <article class="kpi-card">
+                    <p>Pending Review</p>
+                    <h2 id="settlement-pending">—</h2>
+                    <span>Awaiting a decision</span>
+                </article>
+                <article class="kpi-card">
+                    <p>Approved / In Progress</p>
+                    <h2 id="settlement-active">—</h2>
+                    <span>Recovery underway</span>
+                </article>
+            </section>
+
+            <section class="panel settlement-proposal-panel" id="proposal-panel">
+                <div class="panel-heading">
+                    <div>
+                        <h3>Propose a settlement</h3>
+                        <p class="muted">
+                            Submit a reduced recovery amount for managerial review.
+                        </p>
+                    </div>
+                </div>
+
+                <form id="settlement-proposal-form" class="settlement-form">
+                    <div class="form-group settlement-account-field">
+                        <label for="proposal-account">Customer / Loan Account</label>
+                        <input
+                            type="text"
+                            id="proposal-account"
+                            list="settlement-account-options"
+                            placeholder="Search by loan number or customer name"
+                            autocomplete="off"
+                            required
+                        >
+                        <datalist id="settlement-account-options"></datalist>
+                        <input type="hidden" id="proposal-account-id">
+                        <small id="proposal-account-info" class="muted">
+                            Search for an account to view its outstanding balance.
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="proposal-amount">Proposed Amount (₹)</label>
+                        <input
+                            type="number"
+                            id="proposal-amount"
+                            min="0.01"
+                            step="0.01"
+                            placeholder="Enter amount"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="proposal-due-date">Expected Payment Date</label>
+                        <input
+                            type="date"
+                            id="proposal-due-date"
+                        >
+                    </div>
+
+                    <div class="form-group settlement-full-width">
+                        <label for="proposal-reason">Settlement Reason</label>
+                        <input
+                            type="text"
+                            id="proposal-reason"
+                            maxlength="500"
+                            placeholder="Reason for proposing settlement"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group settlement-full-width">
+                        <label for="proposal-remarks">Additional Remarks</label>
+                        <textarea
+                            id="proposal-remarks"
+                            rows="3"
+                            placeholder="Customer circumstances, negotiation details, etc."
+                        ></textarea>
+                    </div>
+
+                    <div class="settlement-form-actions settlement-full-width">
+                        <button type="submit" class="primary-button" id="submit-proposal">
+                            Submit Proposal
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="panel settlement-register-panel">
+                <div class="panel-heading settlement-register-heading">
+                    <div>
+                        <h3>Settlement Register</h3>
+                        <p class="muted">
+                            Track proposals and their recovery progress.
+                        </p>
+                    </div>
+
+                    <div class="settlement-filters">
+                        <input
+                            type="search"
+                            id="settlement-search"
+                            placeholder="Search loan / customer"
+                        >
+                        <select id="settlement-status-filter">
+                            <option value="">All statuses</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Approved">Approved</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="accounts-table settlement-table">
+                        <thead>
+                            <tr>
+                                <th>Customer / Loan</th>
+                                <th>Proposed</th>
+                                <th>Approved</th>
+                                <th>Waiver</th>
+                                <th>Paid</th>
+                                <th>Remaining</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="settlement-table-body">
+                            <tr>
+                                <td colspan="8" class="empty-state">
+                                    Loading settlement records...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="settlement-pagination">
+                    <span id="settlement-record-count" class="muted">
+                        No records loaded
+                    </span>
+
+                    <div class="pagination-controls">
+                        <button id="settlement-prev" class="secondary-button"
+                                type="button" disabled>Previous</button>
+
+                        <span id="settlement-page-info" class="muted">Page 1</span>
+
+                        <button id="settlement-next" class="secondary-button"
+                                type="button" disabled>Next</button>
+                    </div>
+                </div>
+            </section>
+            <!-- SETTLEMENT ACTION MODAL -->
+            <div class="modal-overlay" id="settlement-modal" hidden>
+                <div class="modal settlement-modal" role="dialog"
+                     aria-modal="true" aria-labelledby="modal-title">
+
+                    <div class="modal-header">
+                        <div>
+                            <p class="eyebrow">SETTLEMENT MANAGEMENT</p>
+                            <h2 id="modal-title">Settlement Details</h2>
+                        </div>
+                        <button type="button" class="modal-close"
+                                id="close-settlement-modal" aria-label="Close">
+                            &times;
+                        </button>
+                    </div>
+
+                    <div class="settlement-modal-summary" id="modal-summary">
+                        Loading settlement details...
+                    </div>
+                    <div class="settlement-payment-history">
+                        <div class="payment-history-heading">
+                            <h3>Payment History</h3>
+                            <span id="payment-history-total">Loading...</span>
+                        </div>
+                        <div id="payment-history-list">
+                            Loading payment records...
+                        </div>
+                    </div>
+
+                    <form id="settlement-action-form">
+
+                        <div id="approval-fields" hidden>
+                            <div class="form-group">
+                                <label for="approval-remarks">Approval Remarks</label>
+                                <textarea id="approval-remarks" rows="3"
+                                    placeholder="Optional approval remarks"></textarea>
+                            </div>
+                        </div>
+
+                        <div id="rejection-fields" hidden>
+                            <div class="form-group">
+                                <label for="rejection-remarks">Rejection Reason *</label>
+                                <textarea id="rejection-remarks" rows="3"
+                                    placeholder="Explain why this proposal is rejected"
+                                    required></textarea>
+                            </div>
+                        </div>
+
+                        <div id="payment-fields" hidden>
+                            <div class="form-group">
+                                <label for="payment-amount">Payment Amount (₹) *</label>
+                                <input type="number" id="payment-amount"
+                                    min="0.01" step="0.01"
+                                    placeholder="Enter payment amount">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="payment-reference">Payment Reference</label>
+                                <input type="text" id="payment-reference"
+                                    placeholder="Transaction / receipt reference">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="payment-remarks">Payment Remarks</label>
+                                <textarea id="payment-remarks" rows="2"
+                                    placeholder="Additional payment details"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="settlement-modal-actions">
+                            <button type="button" class="secondary-button"
+                                id="reject-settlement-action" hidden>
+                                Reject Proposal
+                            </button>
+
+                            <button type="button" class="secondary-button"
+                                id="cancel-settlement-action">
+                                Cancel
+                            </button>
+
+                            <button type="submit" class="primary-button"
+                                id="confirm-settlement-action">
+                                Confirm
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+            <!-- END SETTLEMENT ACTION MODAL -->
+            <footer class="page-footer">
+                Shaha Finlease LMS · Collections workspace
+            </footer>
+        </main>
+    </div>
+
+    <script src="/static/js/settlements.js"></script>
+</body>
+</html>

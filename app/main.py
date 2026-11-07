@@ -1,4 +1,4 @@
-from app.routers.auth import router as auth_router
+﻿from app.routers.auth import router as auth_router
 from fastapi import FastAPI
 from sqlalchemy import text
 from starlette.middleware.sessions import SessionMiddleware
@@ -75,7 +75,17 @@ def portfolio_page(request: Request):
         name="accounts.html",
     )
 
-@app.get("/")
+@app.get("/settlement-centre")
+def settlement_page(request: Request):
+    if not request.session.get("user_id"):
+        return RedirectResponse(url="/login", status_code=303)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="settlements.html",
+    )
+
+@app.get('/')
 def home():
     return {
         "message": "Shaha Finlease LMS is running",
