@@ -35,7 +35,10 @@ def dashboard_summary(
 
     total_outstanding = db.scalar(
         select(func.coalesce(func.sum(Account.outstanding), 0))
-        .where(account_filter)
+        .where(
+            account_filter,
+            Account.status.notin_(["Closed", "Settled"])
+        )
     ) or 0
 
     total_original = db.scalar(

@@ -125,6 +125,9 @@ async function loadAccountDetails(accountId) {
 
     try {
         const account = await api(`/accounts/${accountId}`);
+        const paymentEntryPanel = document.getElementById("payment-entry-panel");
+        paymentEntryPanel.style.display =
+            ["Closed", "Settled"].includes(account.status) ? "none" : "block";
 
         document.getElementById("modal-customer").textContent =
             account.customer_name;
@@ -141,7 +144,7 @@ async function loadAccountDetails(accountId) {
             ["Language", account.language],
             ["Product", account.product],
             ["Original Amount", money(account.original_amount)],
-            ["Outstanding", money(account.outstanding)],
+            ["Original Outstanding", money(account.outstanding)],
             ["Status", account.status],
             ["Office ID", account.office_id],
             ["Owner ID", account.owner_id]
@@ -280,7 +283,7 @@ async function loadPaymentHistory() {
     try {
         const data = await api(`/payments/${activeAccountId}`);
 
-        box.innerHTML = `<div class="history-item"><strong>Total paid: ${money(data.total_paid || 0)}</strong><p>Loaded outstanding: ${money(data.loaded_outstanding || 0)}</p></div>` +
+        box.innerHTML = `<div class="history-item"><strong>Total paid: ${money(data.total_paid || 0)}</strong><p>Original outstanding: ${money(data.loaded_outstanding || 0)}</p></div>` +
             (data.items.length ? data.items.map(item => `
             <div class="history-item">
                 <strong>${money(item.amount)}</strong>
