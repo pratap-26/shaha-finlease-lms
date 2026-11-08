@@ -76,7 +76,13 @@ def create_ptp(
 ):
     user = get_current_user(request, db)
 
-    check_account_access(payload.account_id, user, db)
+    account = check_account_access(payload.account_id, user, db)
+
+    if account.status in {"Closed", "Settled"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot create a PTP for a closed or settled account."
+        )
 
     if payload.promised_date < date.today():
         raise HTTPException(

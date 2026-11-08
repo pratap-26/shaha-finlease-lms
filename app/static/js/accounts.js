@@ -129,6 +129,10 @@ async function loadAccountDetails(accountId) {
         paymentEntryPanel.style.display =
             ["Closed", "Settled"].includes(account.status) ? "none" : "block";
 
+        const ptpEntryPanel = document.getElementById("ptp-entry-panel");
+        ptpEntryPanel.style.display =
+            ["Closed", "Settled"].includes(account.status) ? "none" : "block";
+
         document.getElementById("modal-customer").textContent =
             account.customer_name;
 

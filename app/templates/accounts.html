@@ -182,9 +182,10 @@
         </section>
 
         <section id="tab-ptps" class="workspace-section hidden">
-            <h3>Record Promise to Pay</h3>
+            <div id="ptp-entry-panel">
+                <h3>Record Promise to Pay</h3>
 
-            <form id="ptp-form" class="workspace-form">
+                <form id="ptp-form" class="workspace-form">
                 <label>Promised amount (₹)</label>
                 <input id="ptp-amount" type="number"
                     min="0.01" step="0.01" required>
@@ -198,8 +199,8 @@
                 <button class="primary-button" type="submit">
                     Record Promise
                 </button>
-            </form>
-
+                </form>
+            </div>
             <h3>Promise History</h3>
             <div id="ptp-history" class="history-list">Loading...</div>
         </section>
