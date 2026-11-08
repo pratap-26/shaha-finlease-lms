@@ -131,22 +131,21 @@ async function loadAccounts(searchTerm = "") {
 
 function resolveSelectedAccount() {
     const entered = $("proposal-account").value.trim();
-    const selected = [...$("settlement-account-options").options]
-        .find(option => option.value === entered);
 
-    if (!selected) {
+    const account = [...accountsById.values()].find(account =>
+        entered === `${account.loan_no} — ${account.customer_name}` ||
+        entered === `${account.loan_no} - ${account.customer_name}`
+    );
+
+    if (!account) {
         $("proposal-account-id").value = "";
         $("proposal-account-info").textContent =
             "Select an account from the suggestions.";
         return null;
     }
 
-    const accountId = Number(selected.dataset.accountId);
-    const account = accountsById.get(accountId);
-
-    if (!account) return null;
-
     $("proposal-account-id").value = account.id;
+
     $("proposal-account-info").textContent =
         `${account.loan_no} · ${account.customer_name} · Outstanding: ${money(account.outstanding)} · Status: ${account.status}`;
 
@@ -574,8 +573,11 @@ function attachEvents() {
         accountSearchTimer = setTimeout(async () => {
             try {
                 await loadAccounts(query);
-                $("proposal-account-info").textContent =
-                    "Select an account from the suggestions.";
+
+                if (!$("proposal-account-id").value) {
+                    $("proposal-account-info").textContent =
+                        "Select an account from the suggestions.";
+                }
             } catch (error) {
                 showMessage(error.message);
             }
@@ -583,6 +585,7 @@ function attachEvents() {
     });
 
     $("proposal-account").addEventListener("change", resolveSelectedAccount);
+
 
     $("settlement-search").addEventListener("input", renderSettlements);
 

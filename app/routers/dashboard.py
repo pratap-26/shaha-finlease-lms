@@ -3,7 +3,10 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Account, Payment, CallLog, PTP, Office
+from app.models import (
+    Account, Payment, CallLog, PTP, Office,
+    Settlement, SettlementPayment, AccountClosure
+)
 from app.permissions import get_current_user
 from app.routers.accounts import visible_accounts_query
 
@@ -69,6 +72,38 @@ def dashboard_summary(
             PTP.status == "Pending",
         )
     ) or 0
+        # Settlement and closure metrics, restricted to visible accounts.
+    settlement_filter = Settlement.account_id.in_(
+        select(visible_ids.c.id)
+    )
+
+    total_settlements = db.scalar(
+        select(func.count(Settlement.id))
+        .where(settlement_filter)
+    ) or 0
+
+    pending_settlements = db.scalar(
+        select(func.count(Settlement.id)).where(
+            settlement_filter,
+            Settlement.status == "Pending",
+        )
+    ) or 0
+
+    total_settlement_recovered = db.scalar(
+        select(func.coalesce(func.sum(SettlementPayment.amount), 0))
+        .join(
+            Settlement,
+            SettlementPayment.settlement_id == Settlement.id
+        )
+        .where(settlement_filter)
+    ) or 0
+
+    closed_accounts = db.scalar(
+        select(func.count(AccountClosure.id))
+        .where(
+            AccountClosure.account_id.in_(select(visible_ids.c.id))
+        )
+    ) or 0
 
     status_rows = db.execute(
         select(Account.status, func.count(Account.id))
@@ -99,6 +134,10 @@ def dashboard_summary(
             "total_ptps": total_ptps,
             "pending_ptps": pending_ptps,
             "pending_ptp_amount": str(pending_ptp_amount),
+            "total_settlements": total_settlements,
+            "pending_settlements": pending_settlements,
+            "total_settlement_recovered": str(total_settlement_recovered),
+            "closed_accounts": closed_accounts,
         },
         "account_status": [
             {"status": status, "count": count}

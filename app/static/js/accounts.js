@@ -175,8 +175,43 @@ function switchTab(tab) {
     if (tab === "ptps") loadPTPHistory();
     if (tab === "payments") loadPaymentHistory();
     if (tab === "allocations") loadAllocationWorkspace();
+    if (tab === "settlements") loadAccountSettlements();
 }
+async function loadAccountSettlements() {
+    const box = document.getElementById("account-settlement-history");
+    box.textContent = "Loading settlement history...";
 
+    try {
+        const data = await api(
+            `/settlements?account_id=${activeAccountId}&page=1&page_size=100`
+        );
+
+        const items = data.items || [];
+
+        if (!items.length) {
+            box.textContent = "No settlement proposals for this account.";
+            return;
+        }
+
+        box.innerHTML = items.map(item => `
+            <div class="history-item">
+                <strong>Settlement #${item.id} — ${escapeHTML(item.status)}</strong>
+                <p>Proposed: ${money(item.proposed_amount)}</p>
+                <p>Approved: ${item.approved_amount !== null
+                    ? money(item.approved_amount) : "Pending review"}</p>
+                <p>Paid: ${money(item.amount_paid)}</p>
+                <p>Remaining: ${money(item.amount_remaining)}</p>
+                <p>Waiver: ${item.waiver_amount !== null
+                    ? money(item.waiver_amount) : "—"}</p>
+                <p>Reason: ${escapeHTML(item.reason || "Not specified")}</p>
+                <p>Proposed: ${escapeHTML(item.proposed_at || "—")}</p>
+            </div>
+        `).join("");
+
+    } catch (error) {
+        box.textContent = error.message;
+    }
+}
 async function loadCallHistory() {
     const box = document.getElementById("call-history");
     box.textContent = "Loading...";

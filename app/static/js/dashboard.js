@@ -81,6 +81,18 @@ async function loadDashboard() {
         document.getElementById("pending-amount").textContent =
             formatMoney(k.pending_ptp_amount);
 
+        document.getElementById("total-settlements").textContent =
+            k.total_settlements.toLocaleString("en-IN");
+
+        document.getElementById("pending-settlements").textContent =
+            k.pending_settlements.toLocaleString("en-IN");
+
+        document.getElementById("settlement-recovered").textContent =
+            formatMoney(k.total_settlement_recovered);
+
+        document.getElementById("closed-accounts").textContent =
+            k.closed_accounts.toLocaleString("en-IN");
+
         renderBreakdown("status-list", data.account_status, "status");
         renderBreakdown("office-list", data.office_distribution, "office");
 

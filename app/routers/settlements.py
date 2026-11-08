@@ -465,49 +465,7 @@ def reject_settlement(
 
 
 # -------------------- RECORD SETTLEMENT PAYMENT --------------------
-# -------------------- GET SETTLEMENT PAYMENT HISTORY --------------------
 
-@router.get("/{settlement_id}/payments")
-def get_settlement_payments(
-    settlement_id: int,
-    request: Request,
-    db: Session = Depends(get_db),
-):
-    user = get_current_user(request, db)
-
-    # Enforce the same account visibility rules as other settlement actions.
-    settlement = get_settlement(settlement_id, user, db)
-
-    records = db.execute(
-        select(SettlementPayment, User.name)
-        .join(User, SettlementPayment.recorded_by_id == User.id)
-        .where(SettlementPayment.settlement_id == settlement.id)
-        .order_by(SettlementPayment.paid_at.desc())
-    ).all()
-
-    items = [
-        {
-            "id": payment.id,
-            "amount": str(payment.amount),
-            "paid_at": payment.paid_at,
-            "reference": payment.reference,
-            "remarks": payment.remarks,
-            "recorded_by": recorded_by,
-        }
-        for payment, recorded_by in records
-    ]
-
-    total_paid = sum(
-        (Decimal(item["amount"]) for item in items),
-        Decimal("0.00"),
-    )
-
-    return {
-        "settlement_id": settlement.id,
-        "items": items,
-        "total_payments": len(items),
-        "total_paid": str(total_paid),
-    }
 @router.post("/{settlement_id}/payments")
 def record_settlement_payment(
     settlement_id: int,
