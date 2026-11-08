@@ -3,7 +3,7 @@ from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -94,12 +94,12 @@ def get_account_call_logs(
         CallLog.account_id == account_id
     )
 
-    total = len(
-        db.scalars(query).all()
-    )
+    total = db.scalar(
+        select(func.count()).select_from(query.subquery())
+    ) or 0
 
     logs = db.scalars(
-        query.order_by(CallLog.created_at.desc())
+        query.order_by(CallLog.created_at.desc(), CallLog.id.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
     ).all()

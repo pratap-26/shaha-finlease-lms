@@ -61,6 +61,21 @@ def record_payment(payload: PaymentCreate, request: Request, db: Session = Depen
             status_code=409,
             detail="A settlement is active for this account. Record payments through the settlement workflow."
         )
+    reference = (payload.reference or "").strip() or None
+
+    if reference:
+        duplicate = db.scalar(
+            select(Payment.id).where(
+                Payment.account_id == account.id,
+                func.lower(func.trim(Payment.reference)) == reference.lower()
+            )
+        )
+
+        if duplicate is not None:
+            raise HTTPException(
+                status_code=409,
+                detail="This transaction reference has already been recorded for this account."
+            )
     amount = Decimal(str(payload.amount)).quantize(Decimal("0.01"))
     if amount <= 0:
         raise HTTPException(status_code=400, detail="Payment must be greater than zero.")
@@ -71,8 +86,14 @@ def record_payment(payload: PaymentCreate, request: Request, db: Session = Depen
             raise HTTPException(status_code=400, detail="This account has already reached its loaded recovery target.")
         if amount > remaining_recovery:
             raise HTTPException(status_code=400, detail=f"Payment exceeds remaining recovery target of {remaining_recovery}.")
-        payment = Payment(account_id=account.id, recorded_by_id=user.id, amount=amount,
-                          paid_at=datetime.utcnow(), reference=payload.reference, remarks=payload.remarks)
+        payment = Payment(
+            account_id=account.id,
+            recorded_by_id=user.id,
+            amount=amount,
+            paid_at=datetime.utcnow(),
+            reference=reference,
+            remarks=payload.remarks
+        )
         db.add(payment)
         db.flush()
         paid_total = refresh_recovery_status(db, account)
